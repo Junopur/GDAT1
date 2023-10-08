@@ -19,24 +19,6 @@ public class Node : MonoBehaviour
     public Node[] Parents { get { return parents; } }
 
     private Vector3 offset = new Vector3(0, 1, 0);
-
-    private void OnDrawGizmos()
-    {
-        //Draws red lines between a parent and its children.
-        if (parents.Length > 0)
-        {
-            foreach (Node node in parents)
-            {
-                Debug.DrawLine(transform.position, node.transform.position, Color.red);
-            }
-        }
-        //Draws green lines between a child and its children.
-        if (children.Length > 0)
-        {
-            foreach (Node node in children)
-            {
-                Debug.DrawLine(transform.position + offset, node.transform.position + offset, Color.green);
-            }
-        }
-    }
 }
+
+
