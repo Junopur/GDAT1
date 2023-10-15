@@ -12,13 +12,43 @@ public class Node : MonoBehaviour
     /// <summary>
     /// Returns the children of the node.
     /// </summary>
+    [SerializeField] public List<Node> listChildren = new List<Node>();
     public Node[] Children { get { return children; } }
     /// <summary>
     /// Returns the parents of the node.
     /// </summary>
     public Node[] Parents { get { return parents; } }
 
+    public Vector3 tLocation;
+
     private Vector3 offset = new Vector3(0, 1, 0);
+    private void Awake()
+    {
+
+        tLocation = transform.position;
+
+        foreach (Node node in children)
+        {
+            listChildren.Add(node);
+        }
+    }
+    private void OnDrawGizmos()
+    {
+        //Draws red lines between a parent and its children.
+        if (parents.Length > 0)
+        {
+            foreach (Node node in parents)
+            {
+                Debug.DrawLine(transform.position, node.transform.position, Color.red);
+            }
+        }
+        //Draws green lines between a child and its children.
+        if (children.Length > 0)
+        {
+            foreach (Node node in children)
+            {
+                Debug.DrawLine(transform.position + offset, node.transform.position + offset, Color.green);
+            }
+        }
+    }
 }
-
-
