@@ -6,7 +6,7 @@ using UnityEngine;
  * the script will detect input from the keyboard or the input from the on screen buttons 
  * check if the player cube is able to move in chosen direction then move your cube.
  */
-public class MoveCube : MonoBehaviour
+public class Player : MonoBehaviour
 {
     //variable of type 'node' called' targetnode'.
     private Node targetNode;
@@ -15,7 +15,8 @@ public class MoveCube : MonoBehaviour
     private bool moving;
     //variable of type float for checking the 'distance' to the 'targetNode'
     [SerializeField] private float distance = 0.5f;
-    void update()
+    [SerializeField] private float speed = 3;
+    void Update()
     {
         //check if player is moving
         if (!moving)
@@ -50,9 +51,9 @@ public class MoveCube : MonoBehaviour
         }
         else  // if player is moving then move them towards target node.        //keep checking if player arrives at target node. if they do then switch 'moving' to false.
         {
-            if (Vector3.Distance(transform.position, targetNode.transform.position,distance)
+            if (Vector3.Distance(transform.position, targetNode.transform.position) < distance)
             {
-                transform.position = Vector3.Lerp(transform.position, targetNode.transform.position,speed, Time.deltaTime);
+                transform.position = Vector3.Lerp(transform.position, targetNode.transform.position,speed*Time.deltaTime);
             }
             else;
             {
@@ -85,9 +86,10 @@ public class MoveCube : MonoBehaviour
 
                 if (Physics.Raycast(transform.position, Vector3.forward, out hit, 100f))
                 {
-                    if (hit.collider.transform.TryGetComponent<Node>(out targetNode node))
+                    if (hit.collider.transform.TryGetComponent<Node>(out targetNode))
                     {
                         //update the destination of the player
+                        SetDestination(targetNode);
                     }
                 }
                 break;
@@ -96,9 +98,10 @@ public class MoveCube : MonoBehaviour
 
                 if (Physics.Raycast(transform.position, Vector3.right, out hit, 100f))
                 {
-                    if (hit.collider.transform.TryGetComponent<Node>(out targetNode node))
+                    if (hit.collider.transform.TryGetComponent<Node>(out targetNode))
                     {
                         //update the destination of the player
+                        SetDestination(targetNode);
                     }
                 }
                 break;
@@ -106,9 +109,10 @@ public class MoveCube : MonoBehaviour
 
                 if (Physics.Raycast(transform.position, -Vector3.forward, out hit, 100f))
                 {
-                    if (hit.collider.transform.TryGetComponent<Node>(out targetNode node))
+                    if (hit.collider.transform.TryGetComponent<Node>(out targetNode))
                     {
                         //update the destination of the player
+                        SetDestination(targetNode);
                     }
                 }
                 break;
@@ -116,9 +120,10 @@ public class MoveCube : MonoBehaviour
 
                 if (Physics.Raycast(transform.position, -Vector3.right, out hit, 100f))
                 {
-                    if (hit.collider.transform.TryGetComponent<Node>(out targetNode node))
+                    if (hit.collider.transform.TryGetComponent<Node>(out targetNode))
                     {
                         //update the destination of the player
+                        SetDestination(targetNode);
                     }
                 }
                 break;
