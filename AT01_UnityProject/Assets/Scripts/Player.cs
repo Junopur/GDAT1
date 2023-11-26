@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,18 +14,34 @@ public class Player : MonoBehaviour
     public Node TargetNode { get; private set; }
 
     private Vector3 currentDir;
-    
-    private bool isMoving;
-    
+
+    public event EventHandler OnPlayerMovingChanged;
+
+    private bool _isMoving = false;
+    public bool IsMoving
+    {
+        get
+        {
+            return _isMoving;
+        }
+        private set
+        {
+            _isMoving = value;
+            OnPlayerMovingChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+    public Direction LastMoveDirection { get; set; } = Direction.None;
+
     [SerializeField] private float distance = 0.5f;
     [SerializeField] private float speed = 3;
 
     public enum Direction
     {
-        NorthPosZ,
-        NorthPosX,
-        NorthNegZ,
-        NorthNegX,
+        None,
+        Left,
+        Right,
+        Up,
+        Down,
     }
     
     // Start is called before the first frame update
@@ -43,36 +60,16 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        if (!isMoving)
+        if (!IsMoving)
         {
             //Implement inputs and event-callbacks here
-            Vector3 moveDir = Vector3.zero;
-            moveDir.x = Input.GetAxisRaw("Horizontal");
-            moveDir.z = Input.GetAxisRaw("Vertical");
             
-            //Debug.Log("player moveDir: " + moveDir);
+            //this overrides the ui input if its detected.
+            TakeKeyboardInput();
 
             bool found = false;
-            if (moveDir.x < 0)
-            {
-                //call the check direction and pass it 3
-                found = CheckDirection(3);
-            }
-            else if (moveDir.x > 0)
-            {
-                //call the check direction and pass it 1
-                found = CheckDirection(1);
-            }
-            else if (moveDir.z < 0)
-            {
-                //call the check direction and pass it 2
-                found = CheckDirection(2);
-            }
-            else if (moveDir.z > 0)
-            {
-                //call the check direction and pass it 0
-                found = CheckDirection(0);
-            }
+            found = CheckDirection(LastMoveDirection);
+            LastMoveDirection = Direction.None;
 
             if (!found)
                 return;
@@ -93,41 +90,48 @@ public class Player : MonoBehaviour
             }
             else
             {
-                isMoving = false;
+                IsMoving = false;
                 CurrentNode = TargetNode;
             }
         }
     }
-
-    //Implement mouse interaction method here
-
-    /// <summary>
-    /// Sets the players target node and current directon to the specified node.
-    /// </summary>
-    /// <param name="node"></param>
-    public void MoveToNode(Node node)
-    {
-        if (isMoving)
-            return;
-        
-        TargetNode = node;
-        
-        currentDir = (TargetNode.transform.position - transform.position).normalized;
-
-        isMoving = true;
-    }
     
+    //Take axis input and ensure only one is used, this overrides the ui input if its detected.
+    private void TakeKeyboardInput()
+    {
+        Vector3 moveDir = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
+
+        if (moveDir != Vector3.zero)
+        {
+            if (Mathf.Abs(moveDir.x) > Mathf.Abs(moveDir.z)) moveDir.z = 0;
+            else moveDir.x = 0;
+
+            // pick only one direction to move in right > left > up, down
+            if (moveDir == Vector3.right)
+                LastMoveDirection = Direction.Right;
+            else if (moveDir == Vector3.left)
+                LastMoveDirection = Direction.Left;
+            else if (moveDir == Vector3.forward)
+                LastMoveDirection = Direction.Up;
+            else if (moveDir == Vector3.back)
+                LastMoveDirection = Direction.Down;
+        }
+    }
+
     // method for checking if a chosen direction is 'valid'
     //takes in an integer as a parameter.
     //return a variable of type 'node'
-    private bool CheckDirection(int intDir)
+    private bool CheckDirection(Direction nextDir)
     {
-        Vector3 direction = intDir switch
+        if (nextDir == Direction.None)
+            return false;
+
+        Vector3 direction = nextDir switch
         {
-            0 => Vector3.forward, // north direction positive on the z axis
-            1 => Vector3.right, // north direction positive on the x axis
-            2 => -Vector3.forward, // north direction negative on the z axis
-            3 => -Vector3.right, // north direction negative on the x axis
+            Direction.Up => Vector3.forward, // north direction positive on the z axis
+            Direction.Right => Vector3.right, // north direction positive on the x axis
+            Direction.Down => -Vector3.forward, // north direction negative on the z axis
+            Direction.Left => -Vector3.right, // north direction negative on the x axis
             _ => Vector3.zero, // unknown
         };
 
@@ -143,68 +147,22 @@ public class Player : MonoBehaviour
         Debug.Log("Couldn't find dir");
         return false;
     }
-    
-    /*private void Update()
+
+    /// <summary>
+    /// Sets the players target node and current directon to the specified node.
+    /// </summary>
+    /// <param name="node"></param>
+    public void MoveToNode(Node node)
     {
-        //check if player is moving
-        Debug.Log("Play is moving: " + isMoving);
+        if (IsMoving)
+            return;
         
-        if (!isMoving)
-        {
-            //check 4 input
-            var moveDir = Vector3.zero;
-            moveDir.x = Input.GetAxisRaw("Horizontal");
-            moveDir.z = Input.GetAxisRaw("Vertical");
-            
-            Debug.Log("player moveDir: " + moveDir);
+        TargetNode = node;
+        
+        currentDir = (TargetNode.transform.position - transform.position).normalized;
 
-            if (moveDir.x < 0)
-            {
-                //call the check direction and pass it 3
-                CheckDirection(3);
-            }
-            else if (moveDir.x > 0)
-            {
-                //call the check direction and pass it 1
-                CheckDirection(1);
-            }
-            else if (moveDir.z < 0)
-            {
-                //call the check direction and pass it 2
-                CheckDirection(2);
-            }
-            else if (moveDir.z > 0)
-            {
-                //call the check direction and pass it 0
-                CheckDirection(0);
-            }
-
-
-        }
-        else // if player is moving then move them towards target node. keep checking if player arrives at target node. if they do then switch 'moving' to false.
-        {
-            if (Vector3.Distance(transform.position, targetNode.transform.position) < distance)
-            {
-                transform.position = Vector3.Lerp(transform.position, targetNode.transform.position, speed * Time.deltaTime);
-            }
-            else
-            {
-                isMoving = false;
-            }
-        }
+        IsMoving = true;
     }
-
-    //player is not moving
-    //the destination of the player
-    //takes in variable of type 'node' as a parameter.
-    public void SetDestination(Node node)
-    {
-        targetNode = node;
-        isMoving = true;
-        
-        //update the direction player is facing towards the targetnode.
-        
-    } 
     
-*/
+
 }
