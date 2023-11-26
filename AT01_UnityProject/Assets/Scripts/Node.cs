@@ -24,6 +24,7 @@ public class Node : MonoBehaviour
     public Node[] Neighbours => Parents.Concat(Children).ToArray();
     
     public Vector3 tLocation;
+    public Node previous;
 
     private Vector3 offset = new Vector3(0, 1, 0);
     private void Awake()

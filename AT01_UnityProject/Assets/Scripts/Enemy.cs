@@ -1,135 +1,151 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Enemy : MonoBehaviour
+public class Enemy: MonoBehaviour
 {
-    [Tooltip("Movement speed modifier.")]
-    [SerializeField] private float speed = 3;
+    [SerializeField] private float speed = 3f;
     private Node currentNode;
     private Node targetNode;
-    private Vector3 currentDir;
+    private Player player;
+    private Stack<Node> dfsPath = new Stack<Node>();
     private bool playerCaught = false;
 
-    private List<Node> path = new List<Node>();
-    
-    private static Node PlayerCurrentNode => GameManager.Instance.Player.CurrentNode;
-    
     public delegate void GameEndDelegate();
     public event GameEndDelegate GameOverEvent = delegate { };
-
-    // Start is called before the first frame update
+    
     private void Start()
     {
         InitializeAgent();
-        targetNode = PlayerCurrentNode;
-        FindPath(currentNode, targetNode); //you should replace end node with your destination node.
+        player = GameManager.Instance.Player;
+        targetNode = GameManager.Instance.Nodes[0];
     }
 
-    // Update is called once per frame
     private void Update()
-    {       
+    {
         if (playerCaught)
-            return;
+            return; // game is already over, don't bother
 
-        if (path.Count > 0 && Vector3.Distance(transform.position, path[0].tLocation) <= 0.25f)
+        if (currentNode == null)
         {
-            path.RemoveAt(0);
-
-            if (path.Count > 0)
-            {
-                currentNode = path[0];
-                currentDir = (currentNode.tLocation - transform.position).normalized;
-            }
-            else
-            {
-                // Here, the enemy has moved to the next node
-                if (targetNode != PlayerCurrentNode) // If the player has moved to another node
-                {
-                    targetNode = PlayerCurrentNode;
-                    Debug.Log($"Player has moved, recalculating and targeting {targetNode.name}");
-                    FindPath(currentNode, targetNode); // Recalculate the path
-                }
-            }
+            MoveToStartingNode();
         }
-
-        if (path.Count > 0)
+        else
         {
-            transform.Translate(currentDir * (speed * Time.deltaTime));
-        }
-        else if(currentNode != null)
-        { 
-            Debug.LogWarning($"{name} - No current node");
-        }
-
-        var position = transform.position;
-        Debug.DrawRay(position, currentDir, Color.cyan);
-
-        if (targetNode != null)
-        {
-            Debug.DrawLine(position, targetNode.tLocation, Color.red);
+            MoveToNextNode();
         }
     }
 
-    //Called when a collider enters this object's trigger collider.
-    //Player or enemy must have rigidbody for this to function correctly.
     private void OnTriggerEnter(Collider other)
     {
-        if (playerCaught) 
-            return;
-        
-        if (other.CompareTag("Player"))
+        if (!playerCaught && other.CompareTag("Player"))
         {
             playerCaught = true;
             GameOverEvent.Invoke(); //invoke the game over event
         }
     }
 
-    /// <summary>
-    /// Sets the current node to the first in the Game Managers node list.
-    /// Sets the current movement direction to the direction of the current node.
-    /// </summary>
     private void InitializeAgent()
     {
         currentNode = GameManager.Instance.Nodes[0];
-        
-        currentDir = currentNode.transform.position - transform.position;
-        currentDir = currentDir.normalized;
     }
 
-    //Implement DFS algorithm method here
-    private void FindPath(Node start, Node end)
+    private void MoveToStartingNode()
     {
-        Dictionary<Node, bool> visited = new Dictionary<Node, bool>();
-        Stack<Node> stack = new Stack<Node>(); 
-        path = new List<Node>();
+        var direction = (targetNode.transform.position - transform.position).normalized;
+        transform.Translate(direction * (speed * Time.deltaTime));
 
-        stack.Push(start);
-
-        while (stack.Count > 0)
+        // Reached the node
+        if (Vector3.Distance(transform.position, targetNode.transform.position) < 0.25f)
         {
-            Node curNode = stack.Pop();
-            if (curNode == end)
-            {
-                path.Add(curNode);
-                return;
-            }
-
-            if (visited.ContainsKey(curNode))
-            {
-                continue;
-            }
-
-            visited[curNode] = true;
-            path.Add(curNode);
-
-            foreach (Node n in curNode.Children)
-            {
-                if (!visited.ContainsKey(n))
-                {
-                    stack.Push(n);
-                }
-            }
+            transform.position = targetNode.transform.position;
+            currentNode = targetNode;
+            
+            // Find the new path
+            FindPathToPlayer();
         }
     }
+
+    private void MoveToNextNode()
+    {
+        // If path found
+        if (dfsPath.Count > 0)
+        {
+            targetNode = dfsPath.Peek(); // next node is on top of stack
+            var direction = (targetNode.transform.position - transform.position).normalized;
+            transform.Translate(direction * (speed * Time.deltaTime));
+
+            // If we have reached target node, pop it from stack
+            if (Vector3.Distance(transform.position, targetNode.transform.position) < 0.25f)
+            {
+                transform.position = targetNode.transform.position;
+                currentNode = dfsPath.Pop();
+            }
+        }
+        // If no path was found or we have reached the destination
+        else if (targetNode != null)
+        {
+            targetNode = null;
+            FindPathToPlayer();
+        }
+    }
+
+    private void FindPathToPlayer()
+    {
+        DFS(currentNode, player.CurrentNode);
+    }
+
+    private void DFS(Node startNode, Node endNode)
+    {
+        Dictionary<Node, Node> nodeToParentMapping = new Dictionary<Node, Node>();
+        HashSet<Node> visitedNodes = new HashSet<Node>();
+        Stack<Node> nodesToVisit = new Stack<Node>();
+        
+        nodeToParentMapping[startNode] = null;
+        nodesToVisit.Push(startNode);
+        
+        while(nodesToVisit.Count > 0)
+        {
+            Node currentNode = nodesToVisit.Pop();
+            visitedNodes.Add(currentNode);
+            
+            if(currentNode == endNode)
+            {
+                Debug.Log("Recalculating path");
+                ConstructPath(nodeToParentMapping, endNode);
+                return;
+            }
+            
+            foreach(Node neighbour in currentNode.Neighbours)
+            {
+                if (visitedNodes.Contains(neighbour))
+                {
+                    continue;
+                }
+
+                if (!nodeToParentMapping.ContainsKey(neighbour))
+                {
+                    nodeToParentMapping[neighbour] = currentNode;
+                }
+                
+                nodesToVisit.Push(neighbour);
+            }
+        }
+        
+        // No path found
+        Debug.Log("No path found in DFS");
+    }
+
+    private void ConstructPath(Dictionary<Node, Node> nodeToParentMapping, Node endNode)
+    {
+        dfsPath.Clear();
+
+        Node currentNode = endNode;
+        
+        while(currentNode != null)
+        {
+            dfsPath.Push(currentNode);
+            currentNode = nodeToParentMapping[currentNode];
+        }
+    }
+
 }
