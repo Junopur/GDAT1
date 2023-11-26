@@ -1,11 +1,15 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Enemy: MonoBehaviour
 {
     [SerializeField] private float speed = 3f;
+    
     private Node currentNode;
     private Node targetNode;
+    private Node lastPlayerNode;
+    
     private Player player;
     private Stack<Node> dfsPath = new Stack<Node>();
     private bool playerCaught = false;
@@ -25,13 +29,29 @@ public class Enemy: MonoBehaviour
         if (playerCaught)
             return; // game is already over, don't bother
 
-        if (currentNode == null)
+        if (currentNode is null)
         {
             MoveToStartingNode();
         }
         else
         {
             MoveToNextNode();
+        }
+    }
+
+    // Draw a line showing the intended path
+    private void OnDrawGizmos()
+    {
+        if (currentNode != null)
+        {
+            Vector3 prevPos = currentNode.tLocation;
+        
+            foreach (var node in dfsPath)
+            {
+                var curPos = node.tLocation;
+                Debug.DrawLine(prevPos, curPos, Color.magenta);
+                prevPos = curPos;
+            }
         }
     }
 
@@ -79,6 +99,13 @@ public class Enemy: MonoBehaviour
             {
                 transform.position = targetNode.transform.position;
                 currentNode = dfsPath.Pop();
+                
+                // if the player has moved, recalculate the path
+                if (lastPlayerNode != player.CurrentNode)
+                {
+                    Debug.Log("Player has Moved");
+                    FindPathToPlayer();
+                }
             }
         }
         // If no path was found or we have reached the destination
@@ -91,61 +118,83 @@ public class Enemy: MonoBehaviour
 
     private void FindPathToPlayer()
     {
-        DFS(currentNode, player.CurrentNode);
+        lastPlayerNode = player.CurrentNode; // Track the node of the player so if he moves we can update it.
+        CalculateDFS(currentNode, player.CurrentNode);
     }
 
-    private void DFS(Node startNode, Node endNode)
+
+    // Depth-first search algorithm for pathfinding
+    private void CalculateDFS(Node startNode, Node endNode)
+    {
+        var nodeByParentMapping = GetDFSNodeMappings(startNode, endNode);
+
+        if(nodeByParentMapping != null)
+        {
+            ConstructPath(nodeByParentMapping, endNode); // Construct path if possible
+        }
+        else
+        {
+            Debug.Log("No path found in DFS");
+        }
+    }
+
+    // Construct path based on DFS
+    private void ConstructPath(Dictionary<Node, Node> nodeByParentMapping, Node endNode)
+    {
+        dfsPath.Clear();
+        Node curNode = endNode;
+
+        // Go through each parent node
+        while (curNode != null)
+        {
+            dfsPath.Push(curNode);
+            curNode = nodeByParentMapping[curNode];
+        }
+    }
+
+    // Find all node -> parent mappings
+    private Dictionary<Node, Node> GetDFSNodeMappings(Node startNode, Node endNode)
     {
         Dictionary<Node, Node> nodeToParentMapping = new Dictionary<Node, Node>();
         HashSet<Node> visitedNodes = new HashSet<Node>();
         Stack<Node> nodesToVisit = new Stack<Node>();
-        
+
+        // Adding start node to mappings and stack
         nodeToParentMapping[startNode] = null;
         nodesToVisit.Push(startNode);
         
         while(nodesToVisit.Count > 0)
         {
-            Node currentNode = nodesToVisit.Pop();
-            visitedNodes.Add(currentNode);
-            
-            if(currentNode == endNode)
+            Node curNode = nodesToVisit.Pop();
+            visitedNodes.Add(curNode);
+
+            // We found the end node
+            if(curNode == endNode)
             {
                 Debug.Log("Recalculating path");
-                ConstructPath(nodeToParentMapping, endNode);
-                return;
+                return nodeToParentMapping;
             }
             
-            foreach(Node neighbour in currentNode.Neighbours)
+            // Going through neighbour nodes
+            foreach(Node neighbour in curNode.Neighbours)
             {
                 if (visitedNodes.Contains(neighbour))
                 {
                     continue;
                 }
 
+                // Add to mappings if not tracked previously
                 if (!nodeToParentMapping.ContainsKey(neighbour))
                 {
-                    nodeToParentMapping[neighbour] = currentNode;
+                    nodeToParentMapping[neighbour] = curNode;
                 }
-                
+
+                // Add to stack for further exploration
                 nodesToVisit.Push(neighbour);
             }
         }
-        
-        // No path found
-        Debug.Log("No path found in DFS");
-    }
 
-    private void ConstructPath(Dictionary<Node, Node> nodeToParentMapping, Node endNode)
-    {
-        dfsPath.Clear();
-
-        Node currentNode = endNode;
-        
-        while(currentNode != null)
-        {
-            dfsPath.Push(currentNode);
-            currentNode = nodeToParentMapping[currentNode];
-        }
+        return null;
     }
 
 }
