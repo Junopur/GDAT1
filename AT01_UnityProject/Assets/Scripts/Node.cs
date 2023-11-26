@@ -13,11 +13,12 @@ public class Node : MonoBehaviour
     /// Returns the children of the node.
     /// </summary>
     [SerializeField] public List<Node> listChildren = new List<Node>();
-    public Node[] Children { get { return children; } }
+    public Node[] Children => children;
+
     /// <summary>
     /// Returns the parents of the node.
     /// </summary>
-    public Node[] Parents { get { return parents; } }
+    public Node[] Parents => parents;
 
     public Vector3 tLocation;
 

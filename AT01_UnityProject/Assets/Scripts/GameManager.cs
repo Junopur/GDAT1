@@ -10,8 +10,8 @@ public class GameManager : MonoBehaviour
     //Stores reference to the player
     [SerializeField] private Player player;
 
-    public Node[] Nodes { get { return nodes; } }
-    public Player Player { get { return player; } }
+    public Node[] Nodes => nodes;
+    public Player Player => player;
 
     public static GameManager Instance { get; private set; }
 
@@ -39,7 +39,7 @@ public class GameManager : MonoBehaviour
     /// Disables the player. Re-loads the active scene after 2 second delay.
     /// </summary>
     /// <returns></returns>
-    IEnumerator RestartGame()
+    private IEnumerator RestartGame()
     {
         player.enabled = false;
         yield return new WaitForSeconds(2);

@@ -16,7 +16,8 @@ public class Player : MonoBehaviour
     //variable of type float for checking the 'distance' to the 'targetNode'
     [SerializeField] private float distance = 0.5f;
     [SerializeField] private float speed = 3;
-    void Update()
+
+    private void Update()
     {
         //check if player is moving
         if (!moving)
