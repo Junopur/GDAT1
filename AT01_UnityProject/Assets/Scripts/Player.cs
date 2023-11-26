@@ -50,7 +50,7 @@ public class Player : MonoBehaviour
             moveDir.x = Input.GetAxisRaw("Horizontal");
             moveDir.z = Input.GetAxisRaw("Vertical");
             
-            Debug.Log("player moveDir: " + moveDir);
+            //Debug.Log("player moveDir: " + moveDir);
 
             bool found = false;
             if (moveDir.x < 0)

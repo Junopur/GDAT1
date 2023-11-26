@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class Node : MonoBehaviour
@@ -20,12 +21,13 @@ public class Node : MonoBehaviour
     /// </summary>
     public Node[] Parents => parents;
 
+    public Node[] Neighbours => Parents.Concat(Children).ToArray();
+    
     public Vector3 tLocation;
 
     private Vector3 offset = new Vector3(0, 1, 0);
     private void Awake()
     {
-
         tLocation = transform.position;
 
         foreach (Node node in children)
