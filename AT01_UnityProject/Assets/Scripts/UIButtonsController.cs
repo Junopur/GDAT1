@@ -56,17 +56,27 @@ public class UIButtonsController : MonoBehaviour
         // -1 because there isn't a button for None, lol.
         buttons[(int)e.Direction - 1].image.sprite = e.InputValid ? validSprite : invalidSprite;
 
-        if (e.InputValid)
-        {
-            Invoke(nameof(ResetButtonColors), 0.5f);
-        }
+        StartCoroutine(WaitAndResetButtonColor(buttons[(int)e.Direction - 1]));
+        //Invoke(nameof(ResetButtonColors), 0.5f);
+    }
+
+    
+    private IEnumerator WaitAndResetButtonColor(Button button)
+    {
+        yield return new WaitForSeconds(0.5f);
+        button.image.sprite = normalSprite;
+    }
+    
+    private void ResetButtonColor(Button button)
+    {
+        button.image.sprite = normalSprite;
     }
 
     private void ResetButtonColors()
     {
         foreach (var button in buttons)
         {
-            button.image.sprite = normalSprite;
+            ResetButtonColor(button);
         }
     }
 

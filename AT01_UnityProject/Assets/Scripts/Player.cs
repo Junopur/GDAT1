@@ -104,45 +104,12 @@ public class Player : MonoBehaviour
             
             return;
         }
-
-        // There was no input
-        
-        /*if (!IsMoving)
-        {
-            TargetNode = tmpNode;
-            
-            if (!found)
-                return;
-            
-            if (TargetNode is null)
-            {
-                Debug.LogError("Target node is null while found is true");
-            }
-
-            // Do Movement
-            MoveToNode(TargetNode);
-
-        }
-        else
-        {
-            if (Vector3.Distance(transform.position, TargetNode.transform.position) > 0.25f)
-            {
-                transform.Translate(currentDir * (speed * Time.deltaTime));
-            }
-            else
-            {
-                IsMoving = false;
-                CurrentNode = TargetNode;
-            }
-        }*/
     }
 
 
     // method for checking if a chosen direction is 'valid'
     //takes in an integer as a parameter.
     //return a variable of type 'node'
-    
-    
     public bool CheckDirection(MoveDirection nextDir, out Node node)
     {
         node = null;
