@@ -36,7 +36,6 @@ public class Player : MonoBehaviour
     [SerializeField] private InputManager inputManager;
     
     [Header("Debug")]
-    [SerializeField] private float distance = 0.5f;
     [SerializeField] private float speed = 3;
 
     // Start is called before the first frame update
