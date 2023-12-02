@@ -1,3 +1,4 @@
+using DefaultNamespace;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,12 +8,15 @@ using UnityEngine.UI;
 
 public class UIButtonsController : MonoBehaviour
 {
+    [Header("Input Manager")]
+    [SerializeField] private InputManager inputManager;
+    
     [Header("Resources")]
     [SerializeField] private Sprite normalSprite;
     [SerializeField] private Sprite validSprite;
     [SerializeField] private Sprite invalidSprite;
     
-    [Header("Buttons")]
+    [Header("Buttons, Must be ordered (left > right > up > down)")]
     [SerializeField] private Button[] buttons; // left right up down
 
     private Player player;
@@ -33,22 +37,23 @@ public class UIButtonsController : MonoBehaviour
     private void Start()
     {
         player = GameManager.Instance.Player;
-        player.DoUIButtonChange += DoUIButtonChange;
+        player.OnInputFinalized += OnInputFinalized;
     }
     
     private void SetPlayerDirection(MoveDirection dir)
     {
-        player.LastMoveDirection = dir;
+        inputManager.UIMoveDirection = dir;
     }
 
-    private void DoUIButtonChange(object sender, Player.DoUIButtonChangeEventArgs e)
+    private void OnInputFinalized(object sender, Player.OnInputFinalizedEventArgs e)
     {
-        if (e.Direction == MoveDirection.None)
+        if (e.Direction == MoveDirection.None) // This shouldn't happen
         {
             Debug.LogError("Direction cannot be none.");
             return;
         }
 
+        // -1 because there isn't a button for None, lol.
         buttons[(int)e.Direction - 1].image.sprite = e.InputValid ? validSprite : invalidSprite;
 
         if (e.InputValid)

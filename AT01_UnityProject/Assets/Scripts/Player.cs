@@ -1,3 +1,4 @@
+using DefaultNamespace;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,9 +17,9 @@ public class Player : MonoBehaviour
     private Vector3 currentDir;
 
     // Moving Event
-    public class DoUIButtonChangeEventArgs : EventArgs
+    public class OnInputFinalizedEventArgs : EventArgs
     {
-        public DoUIButtonChangeEventArgs(bool inputValid, MoveDirection direction)
+        public OnInputFinalizedEventArgs(bool inputValid, MoveDirection direction)
         {
             InputValid = inputValid;
             Direction = direction;
@@ -26,12 +27,15 @@ public class Player : MonoBehaviour
         public MoveDirection Direction { get; set; }
         public bool InputValid { get; set; }
     }
+    public event EventHandler<OnInputFinalizedEventArgs> OnInputFinalized;
     
-    public event EventHandler<DoUIButtonChangeEventArgs> DoUIButtonChange;
+    // Properties
+    public bool IsMoving { get; private set; }
 
-    public bool IsMoving { get; private set; } 
-    public MoveDirection LastMoveDirection { get; set; } = MoveDirection.None;
-
+    [Header("Input")]
+    [SerializeField] private InputManager inputManager;
+    
+    [Header("Debug")]
     [SerializeField] private float distance = 0.5f;
     [SerializeField] private float speed = 3;
 
@@ -51,26 +55,59 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        // Take input
-        TakeKeyboardInput();
-        
-        // Check if we can move in the chosen direction, if no keyboard input, use ui input
-        bool found = false;
-        found = CheckDirection(LastMoveDirection, out Node tmpNode);
-        Debug.Log($"Found: {found}");
-        
-        // Tell the UI to display input
-        if (LastMoveDirection != MoveDirection.None)
+        // Get the input from the Input Manager
+        MoveDirection input = inputManager.GetInput();
+
+        // Already Moving
+        if (IsMoving)
         {
-            bool valid = found;
-            if (IsMoving)
-                valid = false;
+            // If we are moving, we can't take input
+            if (input != MoveDirection.None)
+            {
+                Debug.Log($"Input while moving: {input} rejected.");
+                OnInputFinalized?.Invoke(this, new OnInputFinalizedEventArgs(false, input));
+            }
             
-            DoUIButtonChange?.Invoke(this, new DoUIButtonChangeEventArgs(valid, LastMoveDirection));
-            LastMoveDirection = MoveDirection.None;
+            // Move to the next node
+            if (Vector3.Distance(transform.position, TargetNode.transform.position) > 0.25f)
+            {
+                transform.Translate(currentDir * (speed * Time.deltaTime));
+            }
+            // We have reached the node
+            else
+            {
+                IsMoving = false;
+                CurrentNode = TargetNode;
+            }
+            
+            return;
         }
         
-        if (!IsMoving)
+        // Not Moving, but Input so we try to move.
+        if (input != MoveDirection.None)
+        {
+            // Is there a node we can move to?
+            if (CheckDirection(input, out Node tmpNode))
+            {
+                // Move to the node
+                TargetNode = tmpNode;
+                MoveToNode(TargetNode);
+                
+                // Tell the UI to display input
+                OnInputFinalized?.Invoke(this, new OnInputFinalizedEventArgs(true, input)); // Tell the UI it succeeded
+            }
+            else // There is no node in that direction
+            {
+                Debug.Log($"No Node in Direction {input}");
+                OnInputFinalized?.Invoke(this, new OnInputFinalizedEventArgs(false, input)); // Tell the UI it failed that dir
+            }
+            
+            return;
+        }
+
+        // There was no input
+        
+        /*if (!IsMoving)
         {
             TargetNode = tmpNode;
             
@@ -97,35 +134,16 @@ public class Player : MonoBehaviour
                 IsMoving = false;
                 CurrentNode = TargetNode;
             }
-        }
+        }*/
     }
-    
-    //Take axis input and ensure only one is used, this overrides the ui input if its detected.
-    private void TakeKeyboardInput()
-    {
-        Vector3 moveDir = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
 
-        if (moveDir != Vector3.zero)
-        {
-            if (Mathf.Abs(moveDir.x) > Mathf.Abs(moveDir.z)) moveDir.z = 0;
-            else moveDir.x = 0;
-
-            // pick only one direction to move in right > left > up, down
-            if (moveDir == Vector3.right)
-                LastMoveDirection = MoveDirection.Right;
-            else if (moveDir == Vector3.left)
-                LastMoveDirection = MoveDirection.Left;
-            else if (moveDir == Vector3.forward)
-                LastMoveDirection = MoveDirection.Up;
-            else if (moveDir == Vector3.back)
-                LastMoveDirection = MoveDirection.Down;
-        }
-    }
 
     // method for checking if a chosen direction is 'valid'
     //takes in an integer as a parameter.
     //return a variable of type 'node'
-    private bool CheckDirection(MoveDirection nextDir, out Node node)
+    
+    
+    public bool CheckDirection(MoveDirection nextDir, out Node node)
     {
         node = null;
         
