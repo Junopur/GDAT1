@@ -15,35 +15,26 @@ public class Player : MonoBehaviour
 
     private Vector3 currentDir;
 
-    public event EventHandler OnPlayerMovingChanged;
-
-    private bool _isMoving = false;
-    public bool IsMoving
+    // Moving Event
+    public class DoUIButtonChangeEventArgs : EventArgs
     {
-        get
+        public DoUIButtonChangeEventArgs(bool inputValid, MoveDirection direction)
         {
-            return _isMoving;
+            InputValid = inputValid;
+            Direction = direction;
         }
-        private set
-        {
-            _isMoving = value;
-            OnPlayerMovingChanged?.Invoke(this, EventArgs.Empty);
-        }
+        public MoveDirection Direction { get; set; }
+        public bool InputValid { get; set; }
     }
-    public Direction LastMoveDirection { get; set; } = Direction.None;
+    
+    public event EventHandler<DoUIButtonChangeEventArgs> DoUIButtonChange;
+
+    public bool IsMoving { get; private set; } 
+    public MoveDirection LastMoveDirection { get; set; } = MoveDirection.None;
 
     [SerializeField] private float distance = 0.5f;
     [SerializeField] private float speed = 3;
 
-    public enum Direction
-    {
-        None,
-        Left,
-        Right,
-        Up,
-        Down,
-    }
-    
     // Start is called before the first frame update
     private void Start()
     {
@@ -60,17 +51,29 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
+        // Take input
+        TakeKeyboardInput();
+        
+        // Check if we can move in the chosen direction, if no keyboard input, use ui input
+        bool found = false;
+        found = CheckDirection(LastMoveDirection, out Node tmpNode);
+        Debug.Log($"Found: {found}");
+        
+        // Tell the UI to display input
+        if (LastMoveDirection != MoveDirection.None)
+        {
+            bool valid = found;
+            if (IsMoving)
+                valid = false;
+            
+            DoUIButtonChange?.Invoke(this, new DoUIButtonChangeEventArgs(valid, LastMoveDirection));
+            LastMoveDirection = MoveDirection.None;
+        }
+        
         if (!IsMoving)
         {
-            //Implement inputs and event-callbacks here
+            TargetNode = tmpNode;
             
-            //this overrides the ui input if its detected.
-            TakeKeyboardInput();
-
-            bool found = false;
-            found = CheckDirection(LastMoveDirection);
-            LastMoveDirection = Direction.None;
-
             if (!found)
                 return;
             
@@ -78,7 +81,8 @@ public class Player : MonoBehaviour
             {
                 Debug.LogError("Target node is null while found is true");
             }
-                
+
+            // Do Movement
             MoveToNode(TargetNode);
 
         }
@@ -108,30 +112,32 @@ public class Player : MonoBehaviour
 
             // pick only one direction to move in right > left > up, down
             if (moveDir == Vector3.right)
-                LastMoveDirection = Direction.Right;
+                LastMoveDirection = MoveDirection.Right;
             else if (moveDir == Vector3.left)
-                LastMoveDirection = Direction.Left;
+                LastMoveDirection = MoveDirection.Left;
             else if (moveDir == Vector3.forward)
-                LastMoveDirection = Direction.Up;
+                LastMoveDirection = MoveDirection.Up;
             else if (moveDir == Vector3.back)
-                LastMoveDirection = Direction.Down;
+                LastMoveDirection = MoveDirection.Down;
         }
     }
 
     // method for checking if a chosen direction is 'valid'
     //takes in an integer as a parameter.
     //return a variable of type 'node'
-    private bool CheckDirection(Direction nextDir)
+    private bool CheckDirection(MoveDirection nextDir, out Node node)
     {
-        if (nextDir == Direction.None)
+        node = null;
+        
+        if (nextDir == MoveDirection.None)
             return false;
 
         Vector3 direction = nextDir switch
         {
-            Direction.Up => Vector3.forward, // north direction positive on the z axis
-            Direction.Right => Vector3.right, // north direction positive on the x axis
-            Direction.Down => -Vector3.forward, // north direction negative on the z axis
-            Direction.Left => -Vector3.right, // north direction negative on the x axis
+            MoveDirection.Up => Vector3.forward, // north direction positive on the z axis
+            MoveDirection.Right => Vector3.right, // north direction positive on the x axis
+            MoveDirection.Down => -Vector3.forward, // north direction negative on the z axis
+            MoveDirection.Left => -Vector3.right, // north direction negative on the x axis
             _ => Vector3.zero, // unknown
         };
 
@@ -139,7 +145,7 @@ public class Player : MonoBehaviour
         {
             if (hit.collider.transform.TryGetComponent<Node>(out Node tmpNode))
             {
-                TargetNode = tmpNode;
+                node = tmpNode;
                 return true;
             }
         }
@@ -155,7 +161,11 @@ public class Player : MonoBehaviour
     public void MoveToNode(Node node)
     {
         if (IsMoving)
+        {
+            Debug.LogError("Player is already moving.");
             return;
+        }
+            
         
         TargetNode = node;
         

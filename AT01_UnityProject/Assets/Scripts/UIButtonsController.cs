@@ -2,52 +2,67 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class UIButtonsController : MonoBehaviour
 {
-    [SerializeField] private Button buttonLeft;
-    [SerializeField] private Button buttonRight;
-    [SerializeField] private Button buttonUp;
-    [SerializeField] private Button buttonDown;
+    [Header("Resources")]
+    [SerializeField] private Sprite normalSprite;
+    [SerializeField] private Sprite validSprite;
+    [SerializeField] private Sprite invalidSprite;
+    
+    [Header("Buttons")]
+    [SerializeField] private Button[] buttons; // left right up down
 
     private Player player;
 
     private void Awake()
     {
-        buttonLeft.onClick.AddListener(() => SetPlayerDirection(Player.Direction.Left));
-        buttonRight.onClick.AddListener(() => SetPlayerDirection(Player.Direction.Right));
-        buttonUp.onClick.AddListener(() => SetPlayerDirection(Player.Direction.Up));
-        buttonDown.onClick.AddListener(() => SetPlayerDirection(Player.Direction.Down));
+        if (buttons.Length != 4)
+        {
+            Debug.LogError("There should be 4 buttons in the array.");
+            return;
+        }
+        
+        buttons[0].onClick.AddListener(() => SetPlayerDirection(MoveDirection.Left));
+        buttons[1].onClick.AddListener(() => SetPlayerDirection(MoveDirection.Right));
+        buttons[2].onClick.AddListener(() => SetPlayerDirection(MoveDirection.Up));
+        buttons[3].onClick.AddListener(() => SetPlayerDirection(MoveDirection.Down));
     }
     private void Start()
     {
         player = GameManager.Instance.Player;
-        player.OnPlayerMovingChanged += OnPlayerMovingChanged;
+        player.DoUIButtonChange += DoUIButtonChange;
+    }
+    
+    private void SetPlayerDirection(MoveDirection dir)
+    {
+        player.LastMoveDirection = dir;
     }
 
-    private void OnPlayerMovingChanged(object sender, EventArgs e)
+    private void DoUIButtonChange(object sender, Player.DoUIButtonChangeEventArgs e)
     {
-        //Enable/Disable Buttons
-        ToggleButtons(!player.IsMoving);
-    }
-
-    private void ToggleButtons(bool val)
-    {
-        buttonLeft.enabled = val;
-        buttonRight.enabled = val;
-        buttonUp.enabled = val;
-        buttonDown.enabled = val;
-    }
-
-    private void SetPlayerDirection(Player.Direction dir)
-    {
-        if (!player.IsMoving)
+        if (e.Direction == MoveDirection.None)
         {
-            player.LastMoveDirection = dir;
+            Debug.LogError("Direction cannot be none.");
+            return;
+        }
+
+        buttons[(int)e.Direction - 1].image.sprite = e.InputValid ? validSprite : invalidSprite;
+
+        if (e.InputValid)
+        {
+            Invoke(nameof(ResetButtonColors), 0.5f);
         }
     }
 
-
+    private void ResetButtonColors()
+    {
+        foreach (var button in buttons)
+        {
+            button.image.sprite = normalSprite;
+        }
+    }
 
 }
