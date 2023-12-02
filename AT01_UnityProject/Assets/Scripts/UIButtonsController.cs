@@ -12,7 +12,7 @@ public class UIButtonsController : MonoBehaviour
     [SerializeField] private Button buttonDown;
 
     private Player player;
-    
+
     private void Awake()
     {
         buttonLeft.onClick.AddListener(() => SetPlayerDirection(Player.Direction.Left));
@@ -25,7 +25,7 @@ public class UIButtonsController : MonoBehaviour
         player = GameManager.Instance.Player;
         player.OnPlayerMovingChanged += OnPlayerMovingChanged;
     }
-    
+
     private void OnPlayerMovingChanged(object sender, EventArgs e)
     {
         //Enable/Disable Buttons
@@ -47,8 +47,7 @@ public class UIButtonsController : MonoBehaviour
             player.LastMoveDirection = dir;
         }
     }
-    
 
 
-    }
+
 }
